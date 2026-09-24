@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block content %}
+{% include 'nav.html' %}
+<div class="container mt-3" style="max-width: 960px">
+    <div class="d-flex align-items-center mb-3">
+        <a href="/roms" class="btn btn-sm btn-outline-secondary me-3"><i class="bi bi-arrow-left"></i></a>
+        <h2 class="mb-0">Requests</h2>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Request a game</h5>
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <input id="reqTitle" class="form-control" maxlength="200" placeholder="Game title">
+                </div>
+                <div class="col-md-3">
+                    <select id="reqPlatform" class="form-select">
+                        {% for key, label in platforms %}
+                        <option value="{{ key }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-grid">
+                    <button id="reqSubmit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Request</button>
+                </div>
+                <div class="col-12">
+                    <input id="reqNote" class="form-control form-control-sm" maxlength="500"
+                           placeholder="Note (optional) - region, version, why you want it...">
+                </div>
+            </div>
+            <div id="reqMsg" class="small mt-2"></div>
+        </div>
+    </div>
+
+    <div class="d-flex align-items-center mb-2">
+        <h5 class="mb-0 me-auto">{% if is_admin %}All requests{% else %}My requests{% endif %}</h5>
+        <select id="statusFilter" class="form-select form-select-sm" style="width: auto">
+            <option value="">All</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="declined">Declined</option>
+            <option value="fulfilled">Fulfilled</option>
+        </select>
+    </div>
+    <div id="reqList" class="list-group"></div>
+</div>
+
+<script>
+    const IS_ADMIN = {{ is_admin|tojson }};
+    const BADGE = { pending: 'secondary', approved: 'primary', declined: 'danger', fulfilled: 'success' };
+    const esc = (s) => (s ?? '').toString().replace(/[&<>"']/g, c =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    async function loadRequests() {
+        const status = document.getElementById('statusFilter').value;
+        const res = await fetch('/api/roms/requests' + (status ? '?status=' + status : ''));
+        const { requests } = await res.json();
+        const list = document.getElementById('reqList');
+        if (!requests.length) {
+            list.innerHTML = '<div class="text-secondary">No requests yet.</div>';
+            return;
+        }
+        list.innerHTML = requests.map(r => `
+            <div class="list-group-item">
+                <div class="d-flex align-items-center">
+                    <div class="me-auto">
+                        <strong>${esc(r.title)}</strong>
+                        <span class="text-secondary small ms-2">${esc(r.platform_name)}</span>
+                        <div class="small text-secondary">
+                            ${IS_ADMIN ? 'by ' + esc(r.username) + ' · ' : ''}${new Date(r.created_at + 'Z').toLocaleDateString()}
+                            ${r.note ? ' · ' + esc(r.note) : ''}
+                        </div>
+                        ${r.admin_note ? `<div class="small"><i class="bi bi-chat-left-text"></i> ${esc(r.admin_note)}</div>` : ''}
+                    </div>
+                    <span class="badge text-bg-${BADGE[r.status]} me-2">${r.status}</span>
+                    ${r.rom_id ? `<a class="btn btn-sm btn-success me-1" href="/roms/play/${r.rom_id}" title="Play"><i class="bi bi-play-fill"></i></a>` : ''}
+                    ${IS_ADMIN ? `
+                        <div class="btn-group btn-group-sm me-1">
+                            <button class="btn btn-outline-primary" onclick="setStatus(${r.id}, 'approved')" title="Approve"><i class="bi bi-check-lg"></i></button>
+                            <button class="btn btn-outline-danger" onclick="setStatus(${r.id}, 'declined', true)" title="Decline"><i class="bi bi-x-lg"></i></button>
+                            <button class="btn btn-outline-success" onclick="setStatus(${r.id}, 'fulfilled')" title="Mark fulfilled"><i class="bi bi-box-seam"></i></button>
+                        </div>` : ''}
+                    ${(IS_ADMIN || r.status === 'pending') ? `
+                        <button class="btn btn-sm btn-outline-secondary" onclick="removeRequest(${r.id})" title="Delete"><i class="bi bi-trash"></i></button>` : ''}
+                </div>
+            </div>`).join('');
+    }
+
+    async function setStatus(id, status, askNote) {
+        const body = { status };
+        if (askNote) {
+            const note = prompt('Reason (optional):');
+            if (note === null) return;
+            body.admin_note = note;
+        }
+        await fetch('/api/roms/requests/' + id, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+        });
+        loadRequests();
+    }
+
+    async function removeRequest(id) {
+        if (!confirm('Delete this request?')) return;
+        const res = await fetch('/api/roms/requests/' + id, { method: 'DELETE' });
+        if (!res.ok) alert((await res.json()).error);
+        loadRequests();
+    }
+
+    document.getElementById('reqSubmit').addEventListener('click', async () => {
+        const msg = document.getElementById('reqMsg');
+        const title = document.getElementById('reqTitle').value.trim();
+        if (!title) { msg.className = 'small mt-2 text-danger'; msg.textContent = 'Enter a title.'; return; }
+        const res = await fetch('/api/roms/requests', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title,
+                platform: document.getElementById('reqPlatform').value,
+                note: document.getElementById('reqNote').value,
+            }),
+        });
+        const data = await res.json();
+        if (res.status === 409) {
+            msg.className = 'small mt-2 text-warning';
+            msg.innerHTML = esc(data.error) + ` <a href="/roms/play/${data.rom_id}">Play it</a>`;
+        } else if (!res.ok) {
+            msg.className = 'small mt-2 text-danger'; msg.textContent = data.error;
+        } else {
+            msg.className = 'small mt-2 text-success';
+            msg.textContent = data.duplicate ? 'Someone already requested this - it is on the list.' : 'Request added.';
+            document.getElementById('reqTitle').value = '';
+            document.getElementById('reqNote').value = '';
+            loadRequests();
+        }
+    });
+
+    document.getElementById('statusFilter').addEventListener('change', loadRequests);
+    loadRequests();
+</script>
+{% endblock %}

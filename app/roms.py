@@ -116,6 +116,8 @@ def scan_roms(root=None):
             db.session.rollback()
             logger.warning('ROM library: concurrent scan conflict, will settle on next scan')
         logger.info(f'ROM library scan: {added} added, {removed} removed, {len(found)} total')
+        from rom_requests import fulfil_matching_requests
+        fulfil_matching_requests()
         return added, removed, len(found)
 
 

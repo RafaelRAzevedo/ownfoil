@@ -6,8 +6,10 @@
         <h2 class="mb-0">Retro</h2>
         <input id="romFilter" type="search" class="form-control form-control-sm ms-3" style="max-width: 280px"
                placeholder="Filter games">
+        <a class="btn btn-sm btn-outline-primary ms-auto" href="/roms/requests">
+            <i class="bi bi-inbox"></i> Requests</a>
         {% if current_user.is_admin or admin_account_created == false %}
-        <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" id="rescanBtn">
+        <button type="button" class="btn btn-sm btn-outline-secondary ms-2" id="rescanBtn">
             <i class="bi bi-arrow-clockwise"></i> Rescan
         </button>
         {% endif %}

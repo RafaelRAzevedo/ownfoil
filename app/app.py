@@ -155,6 +155,8 @@ def create_app(db_uri=None):
 
     from roms import roms_blueprint
     app.register_blueprint(roms_blueprint)
+    from rom_requests import requests_blueprint
+    app.register_blueprint(requests_blueprint)
 
     return app
 
