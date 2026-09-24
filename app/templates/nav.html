@@ -16,6 +16,11 @@
                 </li>
                 {% if admin_account_created == false or (current_user.is_authenticated and current_user.has_shop_access()) %}
                 <li class="nav-item">
+                    <a class="nav-link{% if title == 'Retro' %} active" aria-current="page"{% else %}"{% endif %} href="/roms">Retro</a>
+                </li>
+                {% endif %}
+                {% if admin_account_created == false or (current_user.is_authenticated and current_user.has_shop_access()) %}
+                <li class="nav-item">
                     <a class="nav-link{% if title == 'Setup' %} active" aria-current="page"{% else %}"{% endif %}" href="/setup">Setup</a>
                 </li>
                 {% endif %}

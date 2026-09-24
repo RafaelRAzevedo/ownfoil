@@ -38,6 +38,10 @@ def init():
     library_paths = get_library_paths()
     init_libraries(app, watcher, library_paths)
 
+    # Retro ROM library (separate from the Switch pipeline)
+    from roms import scan_roms_in_background
+    scan_roms_in_background(app)
+
     # Enqueue initial titledb update (re-enqueues itself on completion)
     with app.app_context():
         tasks_mod.enqueue_task('startup')
@@ -148,6 +152,9 @@ def create_app(db_uri=None):
     login_manager.init_app(app)
 
     app.register_blueprint(auth_blueprint)
+
+    from roms import roms_blueprint
+    app.register_blueprint(roms_blueprint)
 
     return app
 
