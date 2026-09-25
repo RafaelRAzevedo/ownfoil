@@ -1,18 +1,29 @@
 {% extends "base.html" %}
 {% block content %}
 {% include 'nav.html' %}
-<div class="container mt-3">
-    <div class="d-flex align-items-center mb-2">
+<style>
+    #playerWrap { width: 100%; max-width: 960px; aspect-ratio: 3 / 2; margin: 0 auto; }
+    /* Phones: give the emulator the whole remaining screen so the touch
+       controls sit around the picture instead of on top of it. */
+    @media (max-width: 767.98px) {
+        #playContainer { padding-left: 0; padding-right: 0; }
+        #playHeader { padding: 0 .75rem; }
+        #playerWrap { aspect-ratio: auto; height: calc(100dvh - 140px); max-width: none; }
+        #playNote { display: none; }
+    }
+</style>
+<div class="container mt-3" id="playContainer">
+    <div class="d-flex align-items-center mb-2" id="playHeader">
         <a href="/roms" class="btn btn-sm btn-outline-secondary me-3"><i class="bi bi-arrow-left"></i></a>
         <h4 class="mb-0 me-auto">{{ rom.name }}</h4>
         <span id="stateStatus" class="text-secondary small me-3"></span>
         <button id="deleteState" class="btn btn-sm btn-outline-danger{% if not has_state %} d-none{% endif %}">
             Delete saved state</button>
     </div>
-    <div style="width: 100%; max-width: 960px; aspect-ratio: 4 / 3; margin: 0 auto;">
+    <div id="playerWrap">
         <div id="game"></div>
     </div>
-    <p class="text-secondary small mt-2">Save states made from the emulator menu are stored on the server under
+    <p class="text-secondary small mt-2" id="playNote">Save states made from the emulator menu are stored on the server under
         your account and resume automatically next time. In-game saves stay in this browser.</p>
 </div>
 <script>
